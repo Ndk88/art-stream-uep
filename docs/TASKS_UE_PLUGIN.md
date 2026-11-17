@@ -12,40 +12,49 @@ Origin: this file continues `docs/TASKS_UE_PLUGIN.md` of `art-stream-rec` (commi
 
 `P0 -> P1 -> P2 -> P3 -> P5 -> P4 -> P6 -> P7 -> P8`
 
+**Engines:** P0..P6 and P8 use only the DEV engine (stock launcher UE 5.6). The TARGET engine (NvRTX) is used only in P7, step by step with the user's approval. See `CLAUDE.md` section 0a.
+
 External task **X1** (in the recorder repository, done by the user) must be finished before the error-vector part of P1 acceptance and before P2 acceptance. It does not block P0.
 
 ---
 
-## P0. Environment, scaffolding, packaging check
+## P0. Environment, scaffolding, packaging check (DEV engine only)
 
-**Goal.** Know the environment; a buildable runtime plugin; **proof that it works in a packaged Blueprint-only project** (U8) before any logic is written.
+**Read `CLAUDE.md` section 0a before starting. P0 never builds anything with the TARGET engine (NvRTX) and never writes into protected locations.**
 
-**Step 1: environment survey (read-only).** Find and record in `docs/ENVIRONMENT.md`:
+**Goal.** Know the environment; a buildable runtime plugin on the **DEV engine** (stock launcher UE 5.6); proof that it works in a packaged Blueprint-only project on the DEV engine (U8) before any logic is written.
+
+**Step 0: state after the incident of 2026-11-17 (see `docs/INCIDENTS.md`).**
+- Uncommitted work from the first P0 attempt may exist in the working tree: `Plugins/LightSequence/` (scaffolding, 0.1.0) and `.uedev/LightSequenceDev/` (associated with the TARGET engine, with NvRTX warning flags copied into its target files). Keep the plugin scaffolding if it is clean; **re-associate `.uedev/LightSequenceDev/` with the DEV engine and remove the NvRTX-specific flags** (or recreate the project). Delete its `Binaries/` and `Intermediate/` only inside `.uedev/` (inside the repository, allowed).
+- Do nothing about the TARGET engine's changed DLLs: their recovery is handled by the user (`docs/INCIDENTS.md`).
+
+**Step 1: environment survey (read-only).**
 
 _Start from_ `docs/CURRENT_PC_ENV.md` _(written by the user); verify it and write the result to_ `docs/ENVIRONMENT.md`_._
 
-- engine install path and exact version (from `Engine/Build/Build.version`);
-- Visual Studio / Build Tools version and installed workloads/components relevant to UE 5.6 (MSVC toolset, Windows SDK, .NET), as found on disk or via `vswhere`;
-- the `RunUAT.bat` path; Python version (for `tools/`);
-- the test projects live in `.uedev/` (U9); never use the production project;
-- `UnrealInsights.exe` is **not built** in this engine (see `CURRENT_PC_ENV.md`); it is needed from P3 on for profiling. Propose how to build it from the engine source (target, configuration, expected time) and wait for the user's consent.
+Record both engines (U10):
+- **DEV engine**: launcher UE 5.6 install path (typically under `C:\Program Files\Epic Games\UE_5.6`, verify; the user installs it, you never do), exact version from `Engine/Build/Build.version`, the `EngineAssociation` string for projects (for launcher builds normally `"5.6"`, verify), `Engine/Build/InstalledBuild.txt` present, `UnrealInsights.exe` present, `RunUAT.bat` path. If the DEV engine is not installed, stop and ask the user to install it.
+- **TARGET engine** (read-only facts only): path, version, GUID, as in `CURRENT_PC_ENV.md`.
+- Visual Studio / Build Tools, MSVC toolsets and Windows SDKs that the DEV engine accepts (verify against the DEV engine's requirements);
+- Python version (for `tools/`);
+- the folder for packaged output (outside protected locations, for example `.uedev/_out/`), the test projects in `.uedev/` (U9).
 
 Ask the user before installing or changing anything.
 
-**Step 2: scaffolding.**
+**Step 2: scaffolding (DEV engine).**
 
-- `Plugins/LightSequence/LightSequence.uplugin`: `VersionName` 0.1.0, `EngineVersion` 5.6.0, `CanContainContent` true, one Runtime module `LightSequence`, `PlatformAllowList` Win64.
+- `Plugins/LightSequence/LightSequence.uplugin`: `VersionName` 0.1.0, `EngineVersion` matching the DEV engine (verify the field and the value), `CanContainContent` true, one Runtime module `LightSequence`, `PlatformAllowList` Win64.
 - Module with log category `LogLightSequence` and one trivial Blueprint-callable function (for example `ULightSequenceLibrary::GetPluginVersion()`), enough to see the plugin in Blueprint.
-- The C++ **development** test project `.uedev/LightSequenceDev/` (U9; the folder exists and is empty) that references the plugin of this repository (`AdditionalPluginDirectories` or a junction; record which in `ENVIRONMENT.md`). `EngineAssociation` = the GUID of the engine build (`CURRENT_PC_ENV.md`). Check that `.uedev/` is git-ignored before creating files there.
-- `tools/build_plugin.ps1` (or `.bat`): `RunUAT BuildPlugin -Plugin=<repo>/Plugins/LightSequence/LightSequence.uplugin -Package=<out> -TargetPlatforms=Win64 -Rocket` (verify the arguments for 5.6), output outside the repository or in a git-ignored folder.
+- The C++ **development** test project `.uedev/LightSequenceDev/` (U9), associated with the **DEV engine**, referencing the plugin of this repository (`AdditionalPluginDirectories` or a junction; record which in `ENVIRONMENT.md`). Check that `.uedev/` is git-ignored before creating files there.
+- `tools/build_plugin.ps1`: `RunUAT BuildPlugin` of the **DEV engine** (`-Plugin=<repo>/Plugins/LightSequence/LightSequence.uplugin -Package=<out> -TargetPlatforms=Win64`; verify the arguments for 5.6). The engine path is a parameter with the DEV engine as default; the script refuses to run when the engine path is the TARGET engine (`D:\BESPOKE_ATRIUM\...`) unless an explicit switch for P7 is given.
+- Before the first build: apply the checks of `CLAUDE.md` section 0a and write in the report which engine and paths were used.
 
-**Step 3: packaging check (U8, first real result).**
+**Step 3: packaging check (U8, DEV engine).**
 
-- Create the **Blueprint-only** test project `.uedev/LightSequenceBP/` (U9; no `Source/` folder, same engine GUID as the host project), copy the packaged plugin into its `Plugins/`, open it, call the trivial function from a level Blueprint (manual step for the user if the editor is needed; give exact clicks), package it for Win64 Development (and Shipping if it works) with `RunUAT BuildCookRun`.
-- Record in the report: did packaging need the C++ toolchain (does UBT compile a game target; log lines as evidence)? Did the packaged exe start and call the plugin function (log line)?
-- If packaging needs a compiler, that is a valid result, not a failure: describe the consequence (the build machine needs VS Build Tools, or the host project gets an empty C++ module) and wait for the user's decision.
+- Create the **Blueprint-only** test project `.uedev/LightSequenceBP/` (U9; no `Source/` folder, associated with the DEV engine), copy the packaged plugin into its `Plugins/`, open it, call the trivial function from a level Blueprint (manual step for the user if the editor is needed; give exact clicks), package it for Win64 Development (and Shipping if it works) with the DEV engine's `RunUAT BuildCookRun`.
+- Record in the report: did packaging compile C++ (log lines as evidence)? Did the packaged exe start and call the plugin function (log line)?
 
-**Acceptance.** `ENVIRONMENT.md` exists; the plugin builds with the script; the **packaged Blueprint-only project starts and its log shows the plugin function was called**; the report answers U8 with evidence.
+**Acceptance.** `ENVIRONMENT.md` exists with both engines; the plugin builds on the DEV engine with the script; the packaged Blueprint-only project (DEV engine) starts and its log shows the plugin function was called; the report lists every command that wrote files and confirms that **nothing was written into protected locations**.
 
 ---
 
@@ -179,11 +188,22 @@ Content of `tools/make_error_vectors.py` (uses `plsq.py`):
 
 ---
 
-## P7. Packaging and verification in a Blueprint-only project
+## P7. Transfer to the TARGET engine (NvRTX) and the host project
 
-**Changes.** Build the plugin with the P0 script; install it into `.uedev/LightSequenceBP/` and its packaged build (installation into the host project `Scene_A1` only on the user's explicit command); run the automation tests in the editor and the playback test (real recordings from `test_data/`) in the packaged build.
+**Every step of P7 needs the user's explicit approval before it starts. Read `CLAUDE.md` section 0a again.** The plugin is finished and verified on the DEV engine before P7 begins.
 
-**Acceptance.** All tests pass; a short report lists engine version, platform, what was tested and the result of U8 as it applies to this build.
+**P7a. Final check on the DEV engine.** Build with the P0 script; install into `.uedev/LightSequenceBP/` and its packaged build; run the automation suite and the playback test with the real recordings from `test_data/`. Report.
+
+**P7b. Build plan for the TARGET engine (read-only investigation, no builds).**
+- Find out why UnrealBuildTool considered the TARGET engine out of date on 2026-11-17 (toolchain version used for the original engine build vs. the current default, build settings, makefiles, UBT logs).
+- Find a way to compile the plugin for the TARGET engine **without writing anything into the engine folder** (for example: pin the compiler version the engine was built with; compile the plugin only as part of a Blueprint-only project's packaging, the way `Scene_A1` already compiles its temporary game target; or another way found in the engine source). Also cover how the plugin gets editor binaries for opening `Scene_A1` in the TARGET editor.
+- Write `docs/P7_TARGET_BUILD_PLAN.md`: each command, the engine it uses, **every folder it writes to**, how to verify that no engine file changed (file list with sizes and times before and after), how to stop it, and what the user must back up first (for example a copy of `Engine/Binaries/Win64` and the project). Stop and wait for the user's approval.
+
+**P7c. Build for the TARGET engine (only after approval of the plan).** Run exactly the approved plan, with a snapshot of the engine's file list before and after. If anything in the engine folder changes, stop immediately and report.
+
+**P7d. Installation into `Scene_A1`.** Done by the user or on the user's explicit command, following the plugin README. `Scene_A1` stays Blueprint-only.
+
+**Acceptance.** All tests pass on the DEV engine; the TARGET build follows the approved plan; the before/after snapshot shows no change in the engine folder; the report lists both engine versions, platform, what was tested and the U8 result for each engine.
 
 ---
 
@@ -196,7 +216,7 @@ Content of `tools/make_error_vectors.py` (uses `plsq.py`):
 - underruns, memory;
 - hitches at the loop point and after seeks.
 
-Measurements are taken on the development laptop (see `ENVIRONMENT.md`); the target is a remote server with different hardware, so state the hardware in the report and do not present the numbers as server numbers.
+Measurements are taken on the development laptop with the **DEV engine** (see `ENVIRONMENT.md`); a repeat with the TARGET engine build is optional and only with the user's approval; the target is a remote server with different hardware, so state the hardware in the report and do not present the numbers as server numbers.
 
 Write `docs/BENCHMARK_PLUGIN.md` with the table, an Unreal Insights note per scenario, a line on the status of MegaLights in UE 5.6 (information only, not a commitment) and a conclusion. No offline-render test.
 

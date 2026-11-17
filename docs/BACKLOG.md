@@ -6,7 +6,9 @@ Items that are known but not scheduled. Nothing here is implemented without the 
 
 **R1. Chip order mismatch (U4).** The plugin assumes chip `i` of the file = row `i` of the designer's DataTable. If Madrix/TouchDesigner is patched in a different order than the DataTable, the light will look scrambled. Detection: visual. Possible remedy (future feature): an explicit CHIP_ID -> file index mapping (for example a DataTable column with the file index), applied once when outputs are bound.
 
-**R2. Packaging of a Blueprint-only host project (U8).** A code plugin may force a C++ build at packaging time. Checked in P0; the consequence is decided by the user.
+**R2. Packaging of a Blueprint-only host project (U8).** A code plugin may force a C++ build at packaging time. Checked in P0 on the DEV engine and in P7 on the TARGET engine; the consequence is decided by the user.
+
+**R4. Building for the TARGET engine (NvRTX source build).** On 2026-11-17 a build against it started rebuilding the engine (`docs/INCIDENTS.md`). The plugin is developed on the stock launcher engine (U10); the TARGET build is planned read-only in P7b and run only after the user approves the plan.
 
 **R3. 64,000 real light components (D7).** CPU cost of color updates is measured in P8; GPU cost of so many dynamic lights may be the real limit regardless of the plugin. No clusters (out of scope). MegaLights status in 5.6 is a note in the P8 report only.
 
