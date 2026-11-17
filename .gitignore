@@ -1,0 +1,37 @@
+# Unreal Engine build output (plugin and test projects)
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/
+**/Plugins/*/Binaries/
+**/Plugins/*/Intermediate/
+
+# Packaged plugin / project output
+/out/
+/Packaged/
+*.zip
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.sln
+*.suo
+*.sdf
+*.VC.db
+*.opensdf
+
+# Python
+__pycache__/
+*.pyc
+
+# Local Claude Code settings
+.claude/settings.local.json
+
+# Test data: only the files listed in test_data/README.md are committed
+test_data/generated/
+test_data/M1_9.plsq.part
+*.part
+!test_data/M1_9_trimmed.plsq.part
+!spec/golden/errors/*.part

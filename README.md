@@ -1,0 +1,25 @@
+# art-stream-uep — LightSequence plugin for Unreal Engine 5.6
+
+Plays baked light sequences (`.plsq` files) on 3D models of LED-chip installations in real time, for presentations over Pixel Streaming.
+
+`.plsq` files are recorded from an Art-Net stream (Madrix 5, TouchDesigner) by the **Art Stream Sequence Recorder**: https://github.com/Ndk88/art-stream-rec (release v1.2.1). The format is specified in `spec/PLSQ_SPEC.md` (a read-only copy, see `spec/SPEC_SOURCE.md`).
+
+| Document | Content |
+|---|---|
+| `docs/ARCHITECTURE.md` | How recorder and plugin work together; plugin components |
+| `docs/TASKS_UE_PLUGIN.md` | Development tasks P0..P8 |
+| `docs/BACKLOG.md` | Risks and deferred features |
+| `CLAUDE.md` | Rules and decisions for Claude Code |
+| `test_data/README.md` | Real recordings used for tests |
+
+Status: development of v0.1.0 (branch `dev/v0.1.0`). The plugin itself (`Plugins/LightSequence/`) is created in task P0.
+
+## Versions and branches
+
+| Ref | Purpose |
+|---|---|
+| `master` | Latest release (none yet: initial import only) |
+| tag `vX.Y.Z` | Exact state of a released version |
+| `dev/vX.Y.Z` | Development of the next version (currently `dev/v0.1.0`) |
+
+The plugin version is `VersionName` in `Plugins/LightSequence/LightSequence.uplugin`. It is independent of the recorder version.
