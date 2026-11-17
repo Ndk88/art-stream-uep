@@ -18,7 +18,7 @@ Two programs work together:
 1. **Recorder** (separate repository `Ndk88/art-stream-rec`, Python, release v1.2.1). It listens to the Art-Net stream, takes 30 or 60 snapshots per second (frames: RGBW bytes of every chip) and saves them to a binary `.plsq` file. **Not part of this repository; do not change it.**
 2. **UE plugin** (this repository, C++, UE 5.6, Win64). It reads `.plsq` files at runtime, plays them in real time and colors the chips of the model.
 
-The host UE project is **Blueprint-only**. The plugin is built separately (`RunUAT BuildPlugin`) and delivered with binaries. The host project already has a Remote-Signal mode (live Art-Net through the engine's DMX plugin, in Blueprint) and a selectable light type per chip (point / spot / rect light components or "fake light" ISM spheres with an emissive material). The plugin adds the **Pre Installed** mode: playback from a file.
+The host UE project is **Blueprint-only**. The plugin is built separately (`RunUAT BuildPlugin`) and delivered with binaries. The host project already has a Remote-Signal mode (live Art-Net through the engine's DMX plugin, in Blueprint) and a selectable light type per chip (point / spot / rect light components or "fake light" ISM spheres with an emissive material). The plugin adds the **Pre Installed** mode for `.plsq` files: playback from a file. Small sequences recorded as JSON are already played by an existing, tested Blueprint parser in the host project, which stays unchanged (U1).
 
 A plain-language description of the whole pipeline is in `docs/ARCHITECTURE.md`.
 
@@ -35,7 +35,7 @@ Do not change these without asking the user. D-numbers are shared with the recor
 | D7 | Outputs: (a) "fake light": instanced static meshes with an emissive material that reads a runtime texture; (b) real lights: **one light component per chip** (Point / Spot / Rect). **No clusters.** |
 | D8 | Every meta field of the file (everything except the frame bytes) is readable from Blueprint as a struct and as one JSON string (forwarded over Pixel Streaming to a React frontend). Unknown keys are passed through. |
 | D10 | Playback is time-based: frame = floor(time x fps). Normalization: byte / 255 is a **linear** value (as Make Linear Color in the existing pipeline). |
-| U1 | The plugin reads `.plsq` only. JSON sequences stay with the existing Blueprint pipeline. |
+| U1 | The plugin reads **`.plsq` only**. The recorder also writes JSON sequences (only for layouts of 1 or 2 universes, recorder decision D3). The host UE project **already has a Blueprint JSON parser for them; it is implemented, tested successfully (including files with the optional keys `short_packets` / `first_frame_partial`, recorder manual check M3) and stays as is.** The plugin does not read, replace, wrap or change the JSON pipeline, and no task touches it. All plugin work is about the `.plsq` format. |
 | U2 | **Real-time playback only** (Pixel Streaming). No Movie Render Queue, no offline render, no editor preview without PIE (`bTickInEditor`). `SetExternalTime(t)` and `bBlockOnUnderrun` exist as cheap primitives for the future; they are **not tested and not tuned** for offline rendering. |
 | U3 | Chip count mismatch (file `chips_count` vs model chip count): by default **refuse** with `ChipCountMismatch`, playback does not start, message in the log and in the info JSON. Property `bAllowChipCountMismatch` (default false): when true, play `min(N_file, N_model)` chips, set the extra model chips to black, store the mismatch in `FLightSequenceInfo` and the JSON. `model_chips_tag` is compared separately: **warning only**. |
 | U4 | **Chip order is external to the plugin.** Chip `i` of the file = element `i` of the array (lights) or instance `i` (ISM) that Blueprint passes in = row `i` of the designer's DataTable (Row Name = CHIP_ID, spawn order = row order). The plugin never sorts, never uses `GetComponentsByClass`, never guesses an order and does not validate CHIP_IDs. An explicit CHIP_ID -> file index mapping is a possible future feature (risk R1), not implemented. |
@@ -58,7 +58,7 @@ Use `uint64` / `int64` for every file offset and size.
 ## 4. Out of scope (do not implement unless the user asks)
 
 - Light clusters / proxies (D7).
-- Reading JSON sequences (U1).
+- Reading JSON sequences, or any change to the existing Blueprint JSON parser of the host project (U1).
 - Live Art-Net / DMX input in C++ (U7: only keep the interface open).
 - Movie Render Queue, offline rendering, editor preview without PIE (U2).
 - CHIP_ID mapping, sorting of lights, DataTable validation (U4).

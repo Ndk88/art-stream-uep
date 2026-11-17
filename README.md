@@ -4,6 +4,8 @@ Plays baked light sequences (`.plsq` files) on 3D models of LED-chip installatio
 
 `.plsq` files are recorded from an Art-Net stream (Madrix 5, TouchDesigner) by the **Art Stream Sequence Recorder**: https://github.com/Ndk88/art-stream-rec (release v1.2.1). The format is specified in `spec/PLSQ_SPEC.md` (a read-only copy, see `spec/SPEC_SOURCE.md`).
 
+The plugin handles **only `.plsq`**. The recorder can also save small sequences (1 or 2 universes) as JSON; those are played by the existing, tested Blueprint JSON parser of the host UE project, which stays unchanged and is not part of this repository.
+
 | Document | Content |
 |---|---|
 | `docs/ARCHITECTURE.md` | How recorder and plugin work together; plugin components |

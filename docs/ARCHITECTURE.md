@@ -14,6 +14,13 @@ The **recorder** pretends to be the installation: it listens to that stream and,
 
 A file can be huge (64,000 chips at 60 fps = about 55 GB per hour), so the format is as simple as possible.
 
+For small installations (1 or 2 universes) the recorder can also save the same sequence as **JSON** (same passport keys, frames as numbers 0..1). The host UE project already plays JSON files with its own Blueprint parser; it is tested and **stays as is**. The plugin handles **only `.plsq`** (U1):
+
+```
+recorder ──► .json (1–2 universes) ──► existing Blueprint JSON parser (unchanged, not part of this repo)
+         └─► .plsq (any size)      ──► LightSequence plugin (this repo)
+```
+
 The **plugin** is a player for this file inside Unreal Engine:
 
 1. it **checks** the file (header, meta, consistency) and reports a clear error code when something is wrong;
