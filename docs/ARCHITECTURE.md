@@ -65,7 +65,7 @@ Info API (D8): FLightSequenceInfo (typed fields + AllFields + file name/size/for
 + chip-count-mismatch info), GetSequenceInfoAsJson(), ReadSequenceInfo(path),
 ListSequences(dir) -- header + meta only, no payload.
 
-Watcher: folder (U5), poll every 2 s, ignores .part and growing files,
+Watcher: folder (U5, default <ProjectDir>/DmxChipsManagerPlsqFiles/), poll every 2 s, ignores .part and growing files,
 OnLibraryChanged(New, Removed).
 ```
 

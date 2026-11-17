@@ -18,7 +18,11 @@ Two programs work together:
 1. **Recorder** (separate repository `Ndk88/art-stream-rec`, Python, release v1.2.1). It listens to the Art-Net stream, takes 30 or 60 snapshots per second (frames: RGBW bytes of every chip) and saves them to a binary `.plsq` file. **Not part of this repository; do not change it.**
 2. **UE plugin** (this repository, C++, UE 5.6, Win64). It reads `.plsq` files at runtime, plays them in real time and colors the chips of the model.
 
-The host UE project is **Blueprint-only**. The plugin is built separately (`RunUAT BuildPlugin`) and delivered with binaries. The host project already has a Remote-Signal mode (live Art-Net through the engine's DMX plugin, in Blueprint) and a selectable light type per chip (point / spot / rect light components or "fake light" ISM spheres with an emissive material). The plugin adds the **Pre Installed** mode for `.plsq` files: playback from a file. Small sequences recorded as JSON are already played by an existing, tested Blueprint parser in the host project, which stays unchanged (U1).
+The host UE project (`Scene_A1`) is **Blueprint-only and must stay so**; its packaged exe runs on a remote server (Pixel Streaming).
+
+Engine: a **source build of UE 5.6.1, NVIDIA fork NvRTX Caustics** (`D:\BESPOKE_ATRIUM\UENvRTXCaustics5.6`, registered as `{CB5F2325-467F-DCDB-830C-16B1F05EDBE4}`), not a launcher build. The plugin is compiled with this engine and loads only in it. Details: `docs/CURRENT_PC_ENV.md` (user's survey) and `docs/ENVIRONMENT.md` (verified in P0).
+
+The plugin is built separately (`RunUAT BuildPlugin`) and delivered with binaries. The host project already has a Remote-Signal mode (live Art-Net through the engine's DMX plugin, in Blueprint) and a selectable light type per chip (point / spot / rect light components or "fake light" ISM spheres with an emissive material). The plugin adds the **Pre Installed** mode for `.plsq` files: playback from a file. Small sequences recorded as JSON are already played by an existing, tested Blueprint parser in the host project, which stays unchanged (U1).
 
 A plain-language description of the whole pipeline is in `docs/ARCHITECTURE.md`.
 
@@ -39,10 +43,11 @@ Do not change these without asking the user. D-numbers are shared with the recor
 | U2 | **Real-time playback only** (Pixel Streaming). No Movie Render Queue, no offline render, no editor preview without PIE (`bTickInEditor`). `SetExternalTime(t)` and `bBlockOnUnderrun` exist as cheap primitives for the future; they are **not tested and not tuned** for offline rendering. |
 | U3 | Chip count mismatch (file `chips_count` vs model chip count): by default **refuse** with `ChipCountMismatch`, playback does not start, message in the log and in the info JSON. Property `bAllowChipCountMismatch` (default false): when true, play `min(N_file, N_model)` chips, set the extra model chips to black, store the mismatch in `FLightSequenceInfo` and the JSON. `model_chips_tag` is compared separately: **warning only**. |
 | U4 | **Chip order is external to the plugin.** Chip `i` of the file = element `i` of the array (lights) or instance `i` (ISM) that Blueprint passes in = row `i` of the designer's DataTable (Row Name = CHIP_ID, spawn order = row order). The plugin never sorts, never uses `GetComponentsByClass`, never guesses an order and does not validate CHIP_IDs. An explicit CHIP_ID -> file index mapping is a possible future feature (risk R1), not implemented. |
-| U5 | Sequences folder: default `FPaths::ProjectDir()/LightSequences/` (editor and packaged). Overrides: command line `-LightSequencesDir=<path>`, then the component property (if not empty), then `[LightSequence] SequencesDir=` in the project `.ini`, then the default (first match wins). The resolved path is logged at start and is readable from Blueprint. Never rely on `Saved/`. |
+| U5 | Sequences folder: default `FPaths::ProjectDir()/DmxChipsManagerPlsqFiles/` (editor and packaged; the same convention as the host project's existing JSON parser: Get Project Directory + a fixed folder name). In the host project this is `Scene_A1/DmxChipsManagerPlsqFiles/`; in a packaged build it is expected at `<exe folder>/<ProjectName>/DmxChipsManagerPlsqFiles/` (verify in P6). Overrides: command line `-LightSequencesDir=<path>`, then the component property (if not empty), then `[LightSequence] SequencesDir=` in the project `.ini`, then the default (first match wins). The resolved path is logged at start and is readable from Blueprint. Never rely on `Saved/`. |
 | U6 | Universes are **not used for playback**: the payload is a flat array of RGBW bytes per chip in chip order, a frame is an offset. The port of the recorder's universe count (`count_universes`) is used only for header validation (`InconsistentHeader`) and the info API, never in the frame read path. |
 | U7 | Outputs do not know where a frame comes from: they receive "a frame of RGBW bytes" through one interface (`IChipFrameSink`). Today the only source is the file player; a C++ live Art-Net source may be added later (out of scope now). |
-| U8 | "A Blueprint-only host project needs no C++ toolchain" is an **unverified hypothesis**. It is checked first, in P0, before any logic is written. |
+| U8 | "A Blueprint-only host project needs no C++ toolchain" is an **unverified hypothesis**. It is checked first, in P0, before any logic is written. (Context: the engine on the development PC is a source build, so a compiler is present there; the packaged exe runs on a remote server where only the packaged build is installed.) |
+| U9 | Test projects live in `.uedev/` inside this repository and are **git-ignored**: `.uedev/LightSequenceDev/` (C++ project: the plugin is developed, compiled and auto-tested here; it references `Plugins/LightSequence/` of this repository through `AdditionalPluginDirectories` or a junction, record which) and `.uedev/LightSequenceBP/` (Blueprint-only, no `Source/`, a miniature of the host project: only the **packaged** plugin binaries are copied into its `Plugins/`; proves that the plugin works in a Blueprint-only project and in its packaged exe). Both use the same engine build as the host project. |
 
 ## 3. Scale reference (RGBW, 4 bytes per chip)
 
@@ -74,7 +79,8 @@ Recording from TouchDesigner, 1,680 chips, 14 universes: no ArtSync is sent; eve
 - **Verify every engine API against the UE 5.6 source or documentation before using it.** Names in the task file are intentions, not guarantees. If an API is deprecated or differs in 5.6, say so in the report and use the supported alternative.
 - You cannot create or edit Blueprint, material or DataTable assets. Steps that need the editor are written for the user ("Manual editor steps" in the task file and in `Plugins/LightSequence/README.md`).
 - If a requirement is ambiguous or conflicts with the spec, ask the user. Never edit `spec/`.
-- Never touch the user's production UE project. Development uses a separate test project (found or created in P0 and recorded in `docs/ENVIRONMENT.md`).
+- Never touch the user's production UE project `D:\PRECIOSA\PixelStreaming_Project_1\_ue_\Scene_A1` (Blueprint-only, **must stay Blueprint-only: never add a `Source/` folder or C++ code to it**). The plugin is installed there only at the end (P7), by the user or on the user's explicit command.
+- Development uses two test projects inside the git-ignored folder `.uedev/` of this repository (U9). Do not create test projects anywhere else.
 - Windows 11 / Win64 only. Paths may contain spaces and Cyrillic characters; test with them.
 - C++: Epic coding standard (`F`/`U`/`A`/`E`/`I` prefixes, `bBool`, tabs as in engine code). No per-frame heap allocations in the playback path. No exceptions; errors go through the error path and `OnError`, never a crash or `check()` on bad input files.
 - Logging: category `LogLightSequence`. Code, comments, log text and docs in English. Replies to the user in Russian.
@@ -105,6 +111,9 @@ docs/
 test_data/                    real recordings copied by the user (see test_data/README.md)
   generated/                  git-ignored, synthetic files
 tools/                        small helper scripts (Python stdlib or PowerShell)
+.uedev/                       git-ignored test projects (U9)
+  LightSequenceDev/           C++ development project
+  LightSequenceBP/            Blueprint-only check project
 Plugins/LightSequence/        created in P0
   LightSequence.uplugin
   Source/LightSequence/...

@@ -22,24 +22,26 @@ External task **X1** (in the recorder repository, done by the user) must be fini
 
 **Step 1: environment survey (read-only).** Find and record in `docs/ENVIRONMENT.md`:
 
-_Start from_ `docs/CURRENT_PC_ENV.md` _(written by the user); verify it and write the result to_ `docs/ENVIRONMENT.md`_»_.
+_Start from_ `docs/CURRENT_PC_ENV.md` _(written by the user); verify it and write the result to_ `docs/ENVIRONMENT.md`_._
 
 - engine install path and exact version (from `Engine/Build/Build.version`);
 - Visual Studio / Build Tools version and installed workloads/components relevant to UE 5.6 (MSVC toolset, Windows SDK, .NET), as found on disk or via `vswhere`;
 - the `RunUAT.bat` path; Python version (for `tools/`);
-- where the development test projects will live (ask the user if unclear; never use the production project).
-  Ask the user before installing or changing anything.
+- the test projects live in `.uedev/` (U9); never use the production project;
+- `UnrealInsights.exe` is **not built** in this engine (see `CURRENT_PC_ENV.md`); it is needed from P3 on for profiling. Propose how to build it from the engine source (target, configuration, expected time) and wait for the user's consent.
+
+Ask the user before installing or changing anything.
 
 **Step 2: scaffolding.**
 
 - `Plugins/LightSequence/LightSequence.uplugin`: `VersionName` 0.1.0, `EngineVersion` 5.6.0, `CanContainContent` true, one Runtime module `LightSequence`, `PlatformAllowList` Win64.
 - Module with log category `LogLightSequence` and one trivial Blueprint-callable function (for example `ULightSequenceLibrary::GetPluginVersion()`), enough to see the plugin in Blueprint.
-- A C++ **development** test project (for example `<dev root>/LightSequenceDev/`) that references the plugin (junction or `AdditionalPluginDirectories`; record which in `ENVIRONMENT.md`).
+- The C++ **development** test project `.uedev/LightSequenceDev/` (U9; the folder exists and is empty) that references the plugin of this repository (`AdditionalPluginDirectories` or a junction; record which in `ENVIRONMENT.md`). `EngineAssociation` = the GUID of the engine build (`CURRENT_PC_ENV.md`). Check that `.uedev/` is git-ignored before creating files there.
 - `tools/build_plugin.ps1` (or `.bat`): `RunUAT BuildPlugin -Plugin=<repo>/Plugins/LightSequence/LightSequence.uplugin -Package=<out> -TargetPlatforms=Win64 -Rocket` (verify the arguments for 5.6), output outside the repository or in a git-ignored folder.
 
 **Step 3: packaging check (U8, first real result).**
 
-- Create a **Blueprint-only** test project (no `Source/` folder), copy the packaged plugin into its `Plugins/`, open it, call the trivial function from a level Blueprint (manual step for the user if the editor is needed; give exact clicks), package it for Win64 Development (and Shipping if it works) with `RunUAT BuildCookRun`.
+- Create the **Blueprint-only** test project `.uedev/LightSequenceBP/` (U9; no `Source/` folder, same engine GUID as the host project), copy the packaged plugin into its `Plugins/`, open it, call the trivial function from a level Blueprint (manual step for the user if the editor is needed; give exact clicks), package it for Win64 Development (and Shipping if it works) with `RunUAT BuildCookRun`.
 - Record in the report: did packaging need the C++ toolchain (does UBT compile a game target; log lines as evidence)? Did the packaged exe start and call the plugin function (log line)?
 - If packaging needs a compiler, that is a valid result, not a failure: describe the consequence (the build machine needs VS Build Tools, or the host project gets an empty C++ module) and wait for the user's decision.
 
@@ -170,7 +172,7 @@ Content of `tools/make_error_vectors.py` (uses `plsq.py`):
 
 **Changes.**
 
-- Folder resolution as in U5 (command line `-LightSequencesDir=`, component property, `.ini`, default `FPaths::ProjectDir()/LightSequences/`); the resolved path is logged once and returned by `GetSequencesDirectory()`.
+- Folder resolution as in U5 (command line `-LightSequencesDir=`, component property, `.ini`, default `FPaths::ProjectDir()/DmxChipsManagerPlsqFiles/`); the resolved path is logged once and returned by `GetSequencesDirectory()`. Report where the default resolves in the editor and in the packaged build of `.uedev/LightSequenceBP/`.
 - `ULightSequenceWatcher` (ActorComponent or subsystem; justify): polls on a timer (default 2 s), diffs by name + size + modified time, ignores `.part` and files still growing (stable over two polls), fires `OnLibraryChanged(NewFiles, RemovedFiles)`.
 
 **Acceptance.** Copying a `.plsq` into the folder during PIE and in a packaged build fires the event once the copy is complete; a half-written file is not announced; each override source works.
@@ -179,7 +181,7 @@ Content of `tools/make_error_vectors.py` (uses `plsq.py`):
 
 ## P7. Packaging and verification in a Blueprint-only project
 
-**Changes.** Build the plugin with the P0 script; install it into the Blueprint-only test project and its packaged build; run the automation tests in the editor and the playback test (real recordings from `test_data/`) in the packaged build.
+**Changes.** Build the plugin with the P0 script; install it into `.uedev/LightSequenceBP/` and its packaged build (installation into the host project `Scene_A1` only on the user's explicit command); run the automation tests in the editor and the playback test (real recordings from `test_data/`) in the packaged build.
 
 **Acceptance.** All tests pass; a short report lists engine version, platform, what was tested and the result of U8 as it applies to this build.
 
@@ -193,7 +195,10 @@ Content of `tools/make_error_vectors.py` (uses `plsq.py`):
 - player cost, texture output cost, light output cost (separately; for lights CPU game thread and GPU separately);
 - underruns, memory;
 - hitches at the loop point and after seeks.
-  Write `docs/BENCHMARK_PLUGIN.md` with the table, an Unreal Insights note per scenario, a line on the status of MegaLights in UE 5.6 (information only, not a commitment) and a conclusion. No offline-render test.
+
+Measurements are taken on the development laptop (see `ENVIRONMENT.md`); the target is a remote server with different hardware, so state the hardware in the report and do not present the numbers as server numbers.
+
+Write `docs/BENCHMARK_PLUGIN.md` with the table, an Unreal Insights note per scenario, a line on the status of MegaLights in UE 5.6 (information only, not a commitment) and a conclusion. No offline-render test.
 
 **Acceptance.** The report states plainly which scenarios meet real time at 60 fps and which do not. No redesign based on the results without the user.
 
