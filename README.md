@@ -14,7 +14,7 @@ The plugin handles **only `.plsq`**. The recorder can also save small sequences 
 | `CLAUDE.md` | Rules and decisions for Claude Code |
 | `test_data/README.md` | Real recordings used for tests |
 
-Status: development of v0.1.0 (branch `dev/v0.1.0`). The plugin itself (`Plugins/LightSequence/`) is created in task P0.
+Status: development of v0.1.0 (branch `dev/v0.1.0`). Task P0 done: plugin scaffolding in `Plugins/LightSequence/` (user docs: `Plugins/LightSequence/README.md`), build and test scripts in `tools/`, environment in `docs/ENVIRONMENT.md`.
 
 Engines: development and tests run on the stock **UE 5.6 from the Epic Games Launcher**. The host project's engine (a source build of UE 5.6.1, NvRTX Caustics) is never modified by this project; the plugin is compiled for it only in the final task P7, with a plan approved by the user (see `CLAUDE.md` section 0a).
 

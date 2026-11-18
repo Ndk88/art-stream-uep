@@ -34,3 +34,35 @@ Until recovery: if the TARGET editor asks to rebuild modules when opening a proj
 - Binaries backup (without `.pdb`): `C:\UE_Backups\NvRTX_Caustics_5_6_binaries_2026-11-18`.
 - Host project `Scene_A1`: full backup in `C:\UE_Backups\Scene_A1_before_new_engine_2026-11-18`, `.uproject` re-associated to `{394CF319-...}` (old file kept as `Scene_A1.uproject.bak_old_engine`), opened in the new editor: map `LV_Main` loads, Map Check 0 errors / 0 warnings.
 - Lesson kept in `CLAUDE.md` section 0a: the TARGET engine is read-only for Claude Code; plugin development uses the DEV engine.
+
+## I-2. DEV engine: build intermediates written into engine plugin folders during P0 (2026-11-18)
+
+**Status: CLOSED (2026-11-18): accepted by the user as known UE behavior, with a strict rule (see "Investigation and resolution").**
+
+**What happened.** `tools/build_plugin.ps1` ran `RunUAT BuildPlugin` of the DEV engine (`C:\Program Files\Epic Games\UE_5.6`, installed build). The build itself was correct: UBT ran 9 + 4 + 4 actions, all of them for the `LightSequence` module (toolchain MSVC 14.38.33145 / SDK 10.0.22621.0), no engine module was compiled or linked. But the before/after snapshot of the engine folder (216,541 files) found **1,074 added files, 0 changed, 0 removed**, all inside `Intermediate\Build\Win64\...` of five engine plugins:
+
+| Count | Folder (under `Engine\Plugins\`) |
+|---|---|
+| 627 | `MetaHuman\MetaHumanAnimator\Intermediate` |
+| 268 | `MetaHuman\MetaHumanCoreTechLib\Intermediate` |
+| 117 | `MetaHuman\MetaHumanCalibrationProcessing\Intermediate` |
+| 44 | `VirtualProduction\CaptureManager\CaptureManagerCore\Intermediate` |
+| 18 | `VirtualProduction\CaptureData\Intermediate` |
+
+File types: 791 `.rsp`, 184 `.cpp` (UHT `.gen.cpp`, unity `Module.*.cpp`), 36 `.h`, 36 `.json`, 27 `Timestamp`. **No `.obj`, `.lib`, `.dll`, `.pdb` or `.exe`; no existing engine file changed.** Full list: `.uedev/_logs/build_plugin_20261118_092649/engine_diff.txt` (git-ignored).
+
+**Cause (technical, partly established).** BuildPlugin creates its own `HostProject.uproject` that enables only `LightSequence`; the editor target therefore includes every engine plugin that is enabled by default. The UBT log shows these MetaHuman/Capture modules as "Not under compatible directories" while UBT still generated their UHT output and action response files inside the engine plugin folders (they ship without pre-generated `Intermediate` data, unlike the other engine plugins). The NTFS ACL of the engine folder grants the user Full Control, so Windows did not block the writes.
+
+**Cause (process).** The safety watch of the script looked only for compile/link actions of foreign modules and for TARGET/host paths; UHT/makefile writes into the DEV engine were not anticipated. They were detected only by the after-build snapshot.
+
+**Not affected (checked after the build):** TARGET engine `D:\NVRTXCAUSTICS\5_6` (0 files in `Engine\Binaries\Win64` modified; its `BuildConfiguration.xml` hash unchanged), `Scene_A1` (0 files modified), `%APPDATA%\Unreal Engine\UnrealBuildTool\BuildConfiguration.xml` (hash unchanged), `HKCU\Software\Epic Games` (identical dump).
+
+**Measures.** Work stopped after the build; no further build was started until the user decided.
+
+**Investigation and resolution (2026-11-18, each step approved by the user).**
+1. The 1,074 added files were deleted after a per-file check (in the diff list, inside the five folders, created 09:28:14..09:28:29 during the build); a new snapshot showed 0 differences to the snapshot taken before the build (216,541 files).
+2. `tools/build_plugin.ps1` was rewritten to compile with its own host project (`.uedev/_build/HostProject`) that disables the MetaHuman*/Capture* plugins. Measured: the same 1,074 files were written again (UBT log: `Ignoring plugin 'MetaHuman'`, but `Compile module: MetaHumanBatchProcessor`, i.e. the modules come from the installed editor's receipt `Engine/Binaries/Win64/UnrealEditor.target` / `bBuildAllModules`, not from the project's plugin list). No engine module was compiled or linked (actions only planned; their outputs are up to date).
+3. Findings while defining the exception: 755 `.rsp` files contain the absolute path of the project being built (its shared PCH); UHT `Timestamp` files list header paths in random order; when the project path changes, UBT keeps the previous `.rsp` as `.rsp.old`; UBT also writes unity files `Module.<Name>.cpp`. Absolute paths inside the files point only to `<repo>\.uedev\`, the DEV engine, Visual Studio 2022 and Windows Kits 10.
+4. The user approved a rule (recorded in `CLAUDE.md` section 0a, implemented in `tools/ue_safety.ps1`, `Test-EngineDiff`): new or changed files only inside the five folders, only types `.rsp`, `.rsp.old`, `.gen.cpp`, `Module.*.cpp`, `.h`, `.json`, `Timestamp`, no change to engine files created before 2026-11-18, no deletion, absolute paths only under the four roots above. Any other difference stops the work. The rule applies only to the DEV engine, never to the TARGET engine.
+5. Packaging the Blueprint-only check project with `RunUAT BuildCookRun -stage` wrote one more file into the DEV engine: the empty marker `Engine\Intermediate\Build\BuildCookRun\StagedBuild_LightSequenceBP.ini` (hard-coded in `CopyBuildToStagingDirectory.Automation.cs`: written to `<EngineRoot>\Intermediate\Build\BuildCookRun\` and staged as `Engine/Config/StagedBuild_<Project>.ini`; the path is not configurable). The user approved it as a second tolerated item: only `StagedBuild_LightSequenceBP.ini` / `StagedBuild_LightSequenceDev.ini`, only 0 bytes. Note for P7: packaging `Scene_A1` with the TARGET engine writes the same kind of marker into the TARGET engine folder; the P7 plan must cover it.
+6. The files written by the builds of 2026-11-18 stay in the DEV engine. Rollback at any time: delete the files created on/after 2026-11-18 in the five folders, or "Verify" UE 5.6 in the Epic Games Launcher.
