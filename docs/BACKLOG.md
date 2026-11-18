@@ -8,7 +8,7 @@ Items that are known but not scheduled. Nothing here is implemented without the 
 
 **R2. Packaging of a Blueprint-only host project (U8).** A code plugin may force a C++ build at packaging time. Checked in P0 on the DEV engine and in P7 on the TARGET engine; the consequence is decided by the user.
 
-**R4. Building for the TARGET engine (NvRTX source build).** On 2026-11-17 a build against it started rebuilding the engine (`docs/INCIDENTS.md`). The plugin is developed on the stock launcher engine (U10); the TARGET build is planned read-only in P7b and run only after the user approves the plan.
+**R4. Building for the TARGET engine (NvRTX source build).** On 2026-11-17 a build against it started rebuilding the engine (`docs/INCIDENTS.md`). The plugin is developed on the stock launcher engine (U10); the TARGET build is planned read-only in P7b and run only after the user approves the plan. The TARGET engine was rebuilt on 2026-11-18 with a pinned compiler (MSVC 14.38.33130 / SDK 10.0.22621.0), which removes the most likely cause.
 
 **R3. 64,000 real light components (D7).** CPU cost of color updates is measured in P8; GPU cost of so many dynamic lights may be the real limit regardless of the plugin. No clusters (out of scope). MegaLights status in 5.6 is a note in the P8 report only.
 

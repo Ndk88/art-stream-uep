@@ -1,3 +1,23 @@
+# PC environment
+
+## Current state (updated 2026-11-18)
+
+| Item | Value |
+|---|---|
+| **DEV engine** (plugin development, P0..P6, P8) | Stock UE 5.6 from the Epic Games Launcher, `C:\Program Files\Epic Games\UE_5.6`, registry GUID `{8BBBC3F2-4585-AC67-39DB-EBB1288119CE}` (installed 2026-11-17, starts OK) |
+| **TARGET engine** (host project, P7 only, read-only) | UE 5.6.1 NvRTX Caustics, source build, `D:\NVRTXCAUSTICS\5_6`, registry GUID `{394CF319-4D3A-7BC1-DA7B-CC849351994F}` |
+| TARGET source | `https://github.com/NvRTX/UnrealEngine`, branch `NvRTX_Caustics-5.6`, commit `89f34311628dbee093d99497cb74a3570164c10d` (2026-08-21), cloned with `--depth 1` |
+| TARGET toolchain (pinned) | MSVC 14.38.33130 (toolset 14.38.33145), Windows SDK 10.0.22621.0, in `D:\NVRTXCAUSTICS\5_6\Engine\Saved\UnrealBuildTool\BuildConfiguration.xml` |
+| TARGET built | UnrealEditor Win64 Development, ShaderCompileWorker (2026-11-17/18). UnrealInsights not built |
+| TARGET manual changes | `<NuGetAudit>false</NuGetAudit>` in UAT projects `Gauntlet.Automation.csproj` and `AutomationUtils.Automation.csproj` (NU1901-NU1903, Magick.NET 14.10.0); originals `*.csproj.bak` |
+| TARGET binaries backup | `C:\UE_Backups\NvRTX_Caustics_5_6_binaries_2026-11-18` (no `.pdb`) |
+| Visual Studio | Community 2022 17.14.33; MSVC toolsets 14.38.33130 and 14.44.35207; component "C++ ATL 14.38 (x86 & x64)" added |
+| Windows SDKs | 10.0.19041.0, 10.0.22000.0, 10.0.22621.0, 10.0.26100.0 |
+| Host project | `D:\PRECIOSA\PixelStreaming_Project_1\_ue_\Scene_A1` (Blueprint-only), associated with the TARGET engine `{394CF319-...}`; backup `C:\UE_Backups\Scene_A1_before_new_engine_2026-11-18` |
+| Old engine | `D:\BESPOKE_ATRIUM\UENvRTXCaustics5.6` (GUID `{CB5F2325-...}`): **deleted** 2026-11-18. Everything below this table that refers to it is history |
+
+## Original survey (2026-11-17, before the engine rebuild)
+
 compiled custom UE 5.6 (https://github.com/NvRTX/UnrealEngine/tree/NvRTX_Caustics-5.6):
 
 ```plaintext

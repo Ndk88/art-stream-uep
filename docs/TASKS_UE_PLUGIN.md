@@ -46,7 +46,7 @@ Ask the user before installing or changing anything.
 - `Plugins/LightSequence/LightSequence.uplugin`: `VersionName` 0.1.0, `EngineVersion` matching the DEV engine (verify the field and the value), `CanContainContent` true, one Runtime module `LightSequence`, `PlatformAllowList` Win64.
 - Module with log category `LogLightSequence` and one trivial Blueprint-callable function (for example `ULightSequenceLibrary::GetPluginVersion()`), enough to see the plugin in Blueprint.
 - The C++ **development** test project `.uedev/LightSequenceDev/` (U9), associated with the **DEV engine**, referencing the plugin of this repository (`AdditionalPluginDirectories` or a junction; record which in `ENVIRONMENT.md`). Check that `.uedev/` is git-ignored before creating files there.
-- `tools/build_plugin.ps1`: `RunUAT BuildPlugin` of the **DEV engine** (`-Plugin=<repo>/Plugins/LightSequence/LightSequence.uplugin -Package=<out> -TargetPlatforms=Win64`; verify the arguments for 5.6). The engine path is a parameter with the DEV engine as default; the script refuses to run when the engine path is the TARGET engine (`D:\BESPOKE_ATRIUM\...`) unless an explicit switch for P7 is given.
+- `tools/build_plugin.ps1`: `RunUAT BuildPlugin` of the **DEV engine** (`-Plugin=<repo>/Plugins/LightSequence/LightSequence.uplugin -Package=<out> -TargetPlatforms=Win64`; verify the arguments for 5.6). The engine path is a parameter with the DEV engine as default; the script refuses to run when the engine path is the TARGET engine (`D:\NVRTXCAUSTICS\5_6`) unless an explicit switch for P7 is given.
 - Before the first build: apply the checks of `CLAUDE.md` section 0a and write in the report which engine and paths were used.
 
 **Step 3: packaging check (U8, DEV engine).**
@@ -195,7 +195,7 @@ Content of `tools/make_error_vectors.py` (uses `plsq.py`):
 **P7a. Final check on the DEV engine.** Build with the P0 script; install into `.uedev/LightSequenceBP/` and its packaged build; run the automation suite and the playback test with the real recordings from `test_data/`. Report.
 
 **P7b. Build plan for the TARGET engine (read-only investigation, no builds).**
-- Find out why UnrealBuildTool considered the TARGET engine out of date on 2026-11-17 (toolchain version used for the original engine build vs. the current default, build settings, makefiles, UBT logs).
+- The TARGET engine was rebuilt from scratch on 2026-11-17/18 with a pinned compiler (MSVC 14.38.33130 / SDK 10.0.22621.0, engine-local `BuildConfiguration.xml`; see `docs/CURRENT_PC_ENV.md`). Verify (read-only) that a plugin build would use exactly this toolchain and the same build settings, so that UnrealBuildTool does not consider any engine module out of date (the cause of incident I-1 on the old engine).
 - Find a way to compile the plugin for the TARGET engine **without writing anything into the engine folder** (for example: pin the compiler version the engine was built with; compile the plugin only as part of a Blueprint-only project's packaging, the way `Scene_A1` already compiles its temporary game target; or another way found in the engine source). Also cover how the plugin gets editor binaries for opening `Scene_A1` in the TARGET editor.
 - Write `docs/P7_TARGET_BUILD_PLAN.md`: each command, the engine it uses, **every folder it writes to**, how to verify that no engine file changed (file list with sizes and times before and after), how to stop it, and what the user must back up first (for example a copy of `Engine/Binaries/Win64` and the project). Stop and wait for the user's approval.
 

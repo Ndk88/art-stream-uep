@@ -20,13 +20,13 @@ This section has priority over everything else in this repository, including the
 | Role | Engine | Use |
 |---|---|---|
 | **DEV engine** | Stock **UE 5.6 from the Epic Games Launcher** (an installed build; path recorded in `docs/ENVIRONMENT.md` in P0; the user installs it, you never do) | **All** development, building, testing and packaging in P0..P6 and P8. |
-| **TARGET engine** | User's source build **UE 5.6.1 NvRTX Caustics**, `D:\BESPOKE_ATRIUM\UENvRTXCaustics5.6`, GUID `{CB5F2325-467F-DCDB-830C-16B1F05EDBE4}` | **Read-only reference.** Used only in P7, step by step, with the user's approval of each step. |
+| **TARGET engine** | User's source build **UE 5.6.1 NvRTX Caustics**, `D:\NVRTXCAUSTICS\5_6`, GUID `{394CF319-4D3A-7BC1-DA7B-CC849351994F}` (rebuilt from scratch on 2026-11-17/18 after incident I-1; build facts in `docs/CURRENT_PC_ENV.md`; the old engine folder `D:\BESPOKE_ATRIUM\UENvRTXCaustics5.6` was deleted by the user) | **Read-only reference.** Used only in P7, step by step, with the user's approval of each step. |
 
 The plugin code uses only standard engine modules (Core, CoreUObject, Engine, RenderCore, RHI, Json...) and nothing specific to NvRTX, so it is developed on the stock engine. Compiled plugin binaries are tied to the engine build that compiled them (BuildId); the binaries for the TARGET engine are produced only in P7.
 
 **Protected locations (READ-ONLY, no exceptions without the user's explicit approval in the current session):**
 
-1. `D:\BESPOKE_ATRIUM\UENvRTXCaustics5.6\` and everything inside it (TARGET engine).
+1. `D:\NVRTXCAUSTICS\5_6\` and everything inside it (TARGET engine), including its compiler pin `Engine\Saved\UnrealBuildTool\BuildConfiguration.xml`. Also the backup folder `C:\UE_Backups\`.
 2. `D:\PRECIOSA\PixelStreaming_Project_1\_ue_\Scene_A1\` and everything inside it (host project, Blueprint-only, must stay Blueprint-only).
 3. The DEV engine installation folder (never modify an installed engine).
 4. Anything outside this repository, except the temp folder and the packaging output folder named in `docs/ENVIRONMENT.md`.
@@ -40,7 +40,9 @@ Reading these locations (source, logs, config) is allowed.
 - While a build runs, watch its output. If UBT starts compiling or linking engine modules, or any path of a protected location appears in its actions, **stop the build immediately** and report.
 - Never terminate processes or delete files outside this repository without the user's approval.
 
-**Never** copy NvRTX-specific settings (for example the extra warning flags `/wd4458 /wd4723` found in its `UnrealEditor.Target.cs`) into projects that use the DEV engine.
+**Never** copy TARGET-engine-specific settings (its compiler pin `BuildConfiguration.xml`, its patched UAT `.csproj` files, warning flags such as `/wd4458 /wd4723` used on the old build) into projects that use the DEV engine, and never change those settings in the TARGET engine.
+
+The TARGET engine is built with **MSVC 14.38.33130 (toolset 14.38.33145) and Windows SDK 10.0.22621.0**, pinned in its own `BuildConfiguration.xml`. MSVC 14.44.35207 is also installed on the PC and must not be used for anything that is loaded by the TARGET engine.
 
 ## 1. What this project is
 
