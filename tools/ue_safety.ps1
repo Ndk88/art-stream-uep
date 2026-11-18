@@ -96,6 +96,19 @@ function Assert-ProjectAssociation([string]$UProject, [switch]$AllowTargetEngine
 	return $Assoc
 }
 
+# True when an EngineAssociation value points to the DEV engine: "5.6" (launcher key), or a GUID that
+# HKCU\Software\Epic Games\Unreal Engine\Builds maps to the DEV engine folder (the editor may write the GUID).
+# The registry is only read.
+function Test-DevEngineAssociation([string]$Assoc)
+{
+	if ($Assoc -eq "5.6") { return $true }
+	if ($Assoc -notmatch '^\{[0-9A-Fa-f-]+\}$') { return $false }
+	$Builds = Get-ItemProperty "HKCU:\Software\Epic Games\Unreal Engine\Builds" -ErrorAction SilentlyContinue
+	if (-not $Builds -or -not ($Builds.PSObject.Properties.Name -contains $Assoc)) { return $false }
+	$Path = [string]$Builds.$Assoc
+	return ((Get-NormalizedPath $Path) -ieq (Get-NormalizedPath $script:DevEngineDir))
+}
+
 # Writes a CSV snapshot (relative path, size, last write time UTC ticks) of every file under Root.
 function New-TreeSnapshot([string]$Root, [string]$OutCsv)
 {
@@ -146,6 +159,7 @@ function Compare-TreeSnapshot([string]$BeforeCsv, [string]$AfterCsv)
 #     C:\Program Files\Microsoft Visual Studio\2022\ or C:\Program Files (x86)\Windows Kits\10\.
 # Second allowed item: the empty (0 bytes) marker Engine\Intermediate\Build\BuildCookRun\StagedBuild_<P>.ini that
 # RunUAT BuildCookRun -stage writes, for P = LightSequenceBP or LightSequenceDev (approved 2026-11-18).
+# Third allowed item: new or changed .log / .ini files inside Engine\Programs\LiveCodingConsole\Saved\ (approved 2026-11-18).
 # Anything else stops the work (CLAUDE.md section 0a). Never applied to the TARGET engine.
 $script:DevEngineAllowedDirs = @(
 	"Engine\Plugins\MetaHuman\MetaHumanAnimator\Intermediate\",
@@ -204,6 +218,9 @@ function Test-EngineDiff([string]$EngineDir, [System.Collections.Generic.List[st
 			else { $Violations.Add("$Line (StagedBuild marker is not empty)") }
 			continue
 		}
+		# Third allowed item (approved 2026-11-18): logs / ini of LiveCodingConsole, which the editor of a code
+		# project (also a Blueprint-only project with a temporary target) starts.
+		if ($Rel -match '^Engine\\Programs\\LiveCodingConsole\\Saved\\.+\.(log|ini)$') { $Allowed++; continue }
 		$InDir = $false
 		foreach ($D in $script:DevEngineAllowedDirs) { if ($Rel.StartsWith($D, [System.StringComparison]::OrdinalIgnoreCase)) { $InDir = $true; break } }
 		if (-not $InDir) { $Violations.Add("$Line (outside the five allowed folders)"); continue }

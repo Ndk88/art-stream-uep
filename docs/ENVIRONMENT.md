@@ -48,9 +48,13 @@ The DEV engine and the TARGET engine prefer the same MSVC / SDK versions; compil
 | `.uedev/_out/LightSequenceBP_<Config>/` | Packaged Blueprint-only project (output of `tools/package_bp_project.ps1`) |
 | `.uedev/_logs/` | Logs of every script run, engine snapshots (`engine_before.csv`, `engine_after.csv`, `engine_diff.txt`) |
 
-## Writes outside the repository (approved for P0 by the user on 2026-11-18)
+## Writes outside the repository (approved by the user on 2026-11-18, also for the next tasks)
 
-UE writes per-user caches and logs; the scripts redirect what can be redirected (UAT logs via `uebp_LogFolder` / `uebp_EngineSavedFolder`, UBT logs via `-log=`). Observed in P0: `%LOCALAPPDATA%\UnrealEngine` (Zen DDC, `5.6\Saved`, `Common\UnrealTrace`, `Common\Analytics`, editor json settings), `%LOCALAPPDATA%\CrashReportClient\Saved\Logs`, `%TEMP%\UAT` (UAT rules assembly of installed engines), `C:\ProgramData\Epic` (Zen state file, crash-reporter marker). Details per run: `docs/reports/REPORT_P0.md`.
+UE writes per-user caches and logs; the scripts redirect what can be redirected (UAT logs via `uebp_LogFolder` / `uebp_EngineSavedFolder`, UBT logs via `-log=`). Allowed: UE service files only, in `%LOCALAPPDATA%\UnrealEngine` (Zen DDC, `5.6\Saved`, `Common\UnrealTrace`, `Common\Analytics`, editor json settings), `%LOCALAPPDATA%\UnrealBuildTool`, `%LOCALAPPDATA%\CrashReportClient\Saved\Logs`, `%APPDATA%\Unreal Engine`, `%TEMP%\UAT` (UAT rules assembly of installed engines), and `C:\ProgramData\Epic` (only the Zen state files `Zen\States\*` and the crash-reporter marker `NotAllowedUnattendedBugReports`). Details per run: `docs/reports/REPORT_P0.md`.
+
+Inside the DEV engine folder, tolerated only under the I-2 rule (`CLAUDE.md` section 0a): UBT intermediates in five plugin `Intermediate` folders, the empty `StagedBuild_<Project>.ini` marker, and `.log` / `.ini` files of `Engine\Programs\LiveCodingConsole\Saved\` (LiveCodingConsole is started by the editor of a code project).
+
+`EngineAssociation` of `.uedev/LightSequenceBP` is now the GUID `{8BBBC3F2-4585-AC67-39DB-EBB1288119CE}` (written by the editor during the manual step; it resolves to the DEV engine). The scripts accept `"5.6"` or a GUID that resolves to the DEV engine.
 
 ## Scripts
 

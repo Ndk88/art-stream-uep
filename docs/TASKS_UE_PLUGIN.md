@@ -18,7 +18,7 @@ External task **X1** (in the recorder repository, done by the user) must be fini
 
 ---
 
-## P0. Environment, scaffolding, packaging check (DEV engine only)
+## P0. Environment, scaffolding, packaging check (DEV engine only) — DONE 2026-11-18 (`docs/reports/REPORT_P0.md`)
 
 **Read `CLAUDE.md` section 0a before starting. P0 never builds anything with the TARGET engine (NvRTX) and never writes into protected locations.**
 

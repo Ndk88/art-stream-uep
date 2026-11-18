@@ -10,7 +10,7 @@
 	caches (%LOCALAPPDATA%\UnrealEngine, %LOCALAPPDATA%\UnrealBuildTool).
 	The DEV engine folder is snapshotted before and after (I-2 rule); HKCU\Software\Epic Games is compared.
 
-	The packaged exe is started with -ExecCmds="LightSequence.PrintVersion,quit" (Development only: ExecCmds and
+	The packaged exe is started with -ExecCmds=<GameExecCmds>, default "LightSequence.PrintVersion,quit" (Development only: ExecCmds and
 	console commands are compiled out of Shipping) and its log is checked for the plugin's log lines.
 
 .EXAMPLE
@@ -22,7 +22,9 @@ param(
 	[string]$Configuration = "Development",
 	[string]$EngineDir = "C:\Program Files\Epic Games\UE_5.6",
 	[switch]$SkipEngineSnapshot,
-	[switch]$SkipRun
+	[switch]$SkipRun,
+	# Commands for the packaged exe (non-Shipping). Use "quit" to check a Blueprint call without the console command.
+	[string]$GameExecCmds = "LightSequence.PrintVersion,quit"
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,7 +39,7 @@ $ArchiveDir = Join-Path $Repo ".uedev\_out\LightSequenceBP_$Configuration"
 # --- Safety checks (CLAUDE.md section 0a, U9) ---
 Assert-SafeEngine $EngineDir
 $Assoc = Assert-ProjectAssociation $UProject
-if ($Assoc -ne "5.6") { throw "EngineAssociation of $UProject is '$Assoc', expected '5.6' (DEV engine)." }
+if (-not (Test-DevEngineAssociation $Assoc)) { throw "EngineAssociation of $UProject is '$Assoc', which does not resolve to the DEV engine." }
 if (Test-Path (Join-Path $ProjectDir "Source")) { throw "$ProjectDir has a Source folder; it must stay Blueprint-only." }
 foreach ($P in @($ProjectDir, $ArchiveDir)) { Assert-InsideRepo $P "Folder"; Assert-NotProtected $P "Folder" }
 
@@ -82,7 +84,7 @@ try
 		$Exe = Get-ChildItem -LiteralPath $ArchiveDir -Recurse -Filter "LightSequenceBP*.exe" | Where-Object { $_.DirectoryName -notmatch '\\Binaries\\' } | Select-Object -First 1
 		if (-not $Exe) { throw "Packaged exe not found under $ArchiveDir." }
 		$GameLog = Join-Path $LogDir "packaged_game.log"
-		$GameArgs = "-ExecCmds=`"LightSequence.PrintVersion,quit`" -unattended -nullrhi -nosound -log -abslog=`"$GameLog`""
+		$GameArgs = "-ExecCmds=`"$GameExecCmds`" -unattended -nullrhi -nosound -log -abslog=`"$GameLog`""
 		Write-Host "Starting packaged exe: $($Exe.FullName) $GameArgs"
 		$Proc = Start-Process -FilePath $Exe.FullName -ArgumentList $GameArgs -PassThru -WindowStyle Hidden
 		$null = $Proc.Handle
@@ -102,7 +104,7 @@ try
 		if ($Proc.HasExited) { Write-Host "Packaged exe exit code: $($Proc.ExitCode)" }
 		if (Test-Path $GameLog)
 		{
-			$Lines = Select-String -LiteralPath $GameLog -Pattern "LogLightSequence|LogPluginManager.*LightSequence|Engine Version|Build Configuration"
+			$Lines = Select-String -LiteralPath $GameLog -Pattern "LogLightSequence|LogBlueprintUserMessages|LogPluginManager.*LightSequence|LogLoad: .*LoadMap|Engine Version|Build Configuration|Cmd: quit"
 			$Lines | ForEach-Object { Write-Host "  $($_.Line.Trim())" }
 			if ($Configuration -eq "Development" -and -not ($Lines | Where-Object { $_.Line -match "GetPluginVersion called: 0\.1\.0" })) { $Failed = "plugin function call not found in the packaged exe log" }
 		}

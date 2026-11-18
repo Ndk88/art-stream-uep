@@ -53,4 +53,5 @@ See `docs/ENVIRONMENT.md` and `CLAUDE.md` section 0a of the repository. Short fo
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\build_plugin.ps1        # package -> .uedev\_out\LightSequence
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_tests.ps1           # automation tests "LightSequence."
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\package_bp_project.ps1 -Configuration Development
+# add "-GameExecCmds quit" to check only the Level Blueprint call (without the console command)
 ```

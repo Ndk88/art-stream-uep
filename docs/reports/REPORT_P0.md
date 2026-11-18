@@ -2,14 +2,16 @@
 
 Date: 2026-11-18. Branch: `dev/v0.1.0` (checked with `git branch --show-current` before any work). Plugin `VersionName` 0.1.0.
 
+**Status: P0 DONE (2026-11-18).** All acceptance items are met; the manual Level Blueprint step was done by the user and verified in the packaged exe (section "Manual step and README step 12").
+
 ## Result in short
 
 | Acceptance item | Status |
 |---|---|
 | `docs/ENVIRONMENT.md` with both engines | Done |
 | Plugin builds on the DEV engine with the script | Done: `tools/build_plugin.ps1`, last run 14:17:19, exit 0 |
-| Packaged Blueprint-only project (DEV engine) starts and its log shows the plugin function was called | Done for **Development** (via the console command `LightSequence.PrintVersion`, which calls the Blueprint function; log line below). Shipping: packaged and started (runs, no crash), no log in Shipping. **The Level Blueprint variant is a manual step for the user** (not done yet, see "Open questions") |
-| Report lists every command that wrote files; nothing written into protected locations | Listed below. **Not "nothing"**: the DEV engine folder (protected location 3) received files, see incident I-2 (approved by the user as a known exception, rule in `CLAUDE.md` section 0a). TARGET engine, `Scene_A1`, `C:\UE_Backups`: no change found |
+| Packaged Blueprint-only project (DEV engine) starts and its log shows the plugin function was called | **Done.** Development: the Level Blueprint of map `P0Check` calls `Get Plugin Version` on BeginPlay; the packaged exe, started with `-ExecCmds="quit"` only (no console command), logs `GetPluginVersion called: 0.1.0` right after `LoadMap: /Game/Maps/P0Check` (run 19:39:06). Earlier also via the console command `LightSequence.PrintVersion` (run 14:10:23). Shipping: packaged and started (runs 20 s, no crash); Shipping writes no log |
+| Report lists every command that wrote files; nothing written into protected locations | Listed below. **Not "nothing"**: the DEV engine folder (protected location 3) received files, see incident I-2 (approved by the user as known exceptions, rule in `CLAUDE.md` section 0a). TARGET engine, `Scene_A1`, `C:\UE_Backups`: no change found (rechecked after the last run) |
 | Automation suite `LightSequence.` passes | 1 of 1 passed (`LightSequence.Smoke.PluginVersion`) |
 
 ## What changed in the repository
@@ -60,6 +62,28 @@ LogInit: Build Configuration: Development
 
 **U8 answer (DEV engine):** packaging a Blueprint-only project with this code plugin compiles C++ (a temporary game target in `Intermediate/Source/`, the project stays without `Source/`) **only if** the project's code-plugin set differs from the default one; the plugin alone does not trigger it and then the packaged game silently lacks the module. `Scene_A1` enables engine code plugins, so it is in the working case. The temporary target makes the cook require the project's editor target, which also rebuilds the plugin's editor DLL inside the project's `Plugins/` folder.
 
+## Manual step and README step 12
+
+The user did steps 1..11 of "P0 check" in `Plugins/LightSequence/README.md` in `.uedev/LightSequenceBP` (map `/Game/Maps/P0Check`, Level Blueprint: Event BeginPlay -> Print String(Get Plugin Version); Game Default Map and Editor Startup Map = `P0Check`; `Config/DefaultEngine.ini` now has `GameDefaultMap=/Game/Maps/P0Check.P0Check`). Findings after the editor session, checked before repackaging:
+
+- The editor changed `EngineAssociation` of `LightSequenceBP.uproject` from `"5.6"` to `{8BBBC3F2-4585-AC67-39DB-EBB1288119CE}`; `HKCU\Software\Epic Games\Unreal Engine\Builds` maps it to `C:/Program Files/Epic Games/UE_5.6` (DEV engine). Decision of the user: accept both values; the scripts now accept a GUID only if it resolves to the DEV engine (`Test-DevEngineAssociation`; self-test: `5.6` True, DEV GUID True, TARGET GUID False, unknown GUID False). `.uproject` not edited.
+- Engine snapshot against the last one (14:17): 3 entries, all in `Engine\Programs\LiveCodingConsole\Saved\` (`Logs\LiveCodingConsole.log` changed, `Logs\LiveCodingConsole-backup-2026.11.17-17.10.55.log` added, `Config\CrashReportClient\UECC-Windows-...\CrashReportClient.ini` added), written by LiveCodingConsole during the editor session. Decision of the user: allowed as a third I-2 item (`.log` / `.ini` in that folder). Registry: identical to the session baseline (0 differences).
+
+Step 12: `tools/package_bp_project.ps1 -Configuration Development -GameExecCmds quit` (new parameter; with `quit` only, the log line can come only from the Level Blueprint). Run `package_bp_Development_20261118_193906`, 1 min 33 s: `BUILD SUCCESSFUL` (targets up to date, `Build command time: 6.80 s`), cook `Success - 0 error(s), 0 warning(s)`, packaged exe exit code 0. Packaged log (`packaged_game.log`):
+
+```
+LogPluginManager: Mounting Project plugin LightSequence
+LogInit: Build Configuration: Development
+[2026.11.18-18.40.02:102][  0]LogLightSequence: LightSequence module started, plugin version 0.1.0
+[2026.11.18-18.40.02:131][  0]LogLoad: LoadMap: /Game/Maps/P0Check?Name=Player
+[2026.11.18-18.40.02:140][  0]LogLightSequence: GetPluginVersion called: 0.1.0
+[2026.11.18-18.40.02:140][  0]LogBlueprintUserMessages: [P0Check_C_1] 0.1.0
+[2026.11.18-18.40.02:140][  0]LogLoad: Took 0.009241 seconds to LoadMap(/Game/Maps/P0Check)
+[2026.11.18-18.40.03:148][  1]LogLightSequence: LightSequence module shut down
+```
+
+`LogBlueprintUserMessages: [P0Check_C_1]` is the Print String of the Level Blueprint of `P0Check`. Engine diff of this run: 1 entry (the `StagedBuild_LightSequenceBP.ini` marker), allowed; registry unchanged.
+
 ## Automation tests
 
 `tools/run_tests.ps1` (builds `LightSequenceDevEditor`, then `UnrealEditor-Cmd.exe <uproject> -ExecCmds="Automation RunTests LightSequence; Quit" -unattended -nullrhi -nop4 ...`). Last run `run_tests_20261118_100720` (after the last code change): `Success LightSequence.Smoke.PluginVersion`, `Tests: 1 of 1 passed`, `**** TEST COMPLETE. EXIT CODE: 0 ****`. The dev project uses `AdditionalPluginDirectories: ["../../Plugins"]` (no junction).
@@ -87,6 +111,9 @@ All runs used the **DEV engine** (`C:\Program Files\Epic Games\UE_5.6`); every `
 | 14:10:23 | same, without `-nocompileeditor` | same | 1 (marker, allowed) |
 | 14:12:43 | `package_bp_project.ps1 -Configuration Shipping` | same + `_out/LightSequenceBP_Shipping` | 1 (marker, allowed) |
 | 14:17:19 | `build_plugin.ps1` (final package with README) | `_build`, `_out`, `_logs` | 27, all allowed |
+| ~19:2x | **user**: editor session in `.uedev/LightSequenceBP` (manual step) | `.uedev/LightSequenceBP` (map, config, `.uproject` association) | 3 (LiveCodingConsole `Saved`), allowed afterwards by the user |
+| 19:3x | read-only engine snapshot | `.uedev/_logs/p0_after_manual` | - |
+| 19:39:06 | `package_bp_project.ps1 -Configuration Development -GameExecCmds quit` (step 12) | `.uedev/LightSequenceBP`, `.uedev/_out/LightSequenceBP_Development`, `_logs`, `%TEMP%\UAT` | 1 (marker, allowed) |
 
 Files currently in the DEV engine because of P0 (rollback: delete files created on/after 2026-11-18 in the five folders and the marker, or Launcher "Verify"): build intermediates in the five `Engine\Plugins\...\Intermediate` folders (I-2), `Engine\Intermediate\Build\BuildCookRun\StagedBuild_LightSequenceBP.ini` (0 bytes). The empty folders left by the 09:3x deletion were not removed (the user allowed deleting files only); they were filled again by the following builds.
 
@@ -110,13 +137,16 @@ Files with a write time after 09:20 (counted at about 14:15): `%LOCALAPPDATA%\Un
 
 ## Not verified
 
-- Calling `Get Plugin Version` from a **Level Blueprint** in the editor and in the packaged exe (needs the editor; manual steps in `Plugins/LightSequence/README.md`, section "P0 check").
 - Shipping: that the plugin function runs (no log, no console commands in Shipping); only start + 20 s run.
-- The TARGET engine as a whole (only the folders listed above were checked).
+- The TARGET engine as a whole (only `Engine\Binaries\Win64`, `Engine\Saved\UnrealBuildTool` and the compiler pin hash were checked; last check after the 19:39 run: 0 files modified since 09:20, pin hash `D383CD2A...` unchanged; `Scene_A1` 0, `C:\UE_Backups` 0).
 
-## Open questions for the user
+## Questions and the user's answers (2026-11-18)
 
-1. Manual step: please do the Level Blueprint check in `.uedev/LightSequenceBP` (README, 12 steps) and tell me; I then repackage and check the packaged log for the BeginPlay call.
-2. `C:\ProgramData\Epic` (Zen state file, crash-reporter marker) is outside the folders you approved (`%LOCALAPPDATA%`, `%APPDATA%`). Allow it for the next tasks, or should I look for a way to avoid it?
-3. `.uedev/LightSequenceBP` now enables `DMXProtocol` and `DMXEngine` (like `Scene_A1`) so that packaging compiles the plugin. Keep it so?
-4. For P7 (to be covered by the plan): packaging `Scene_A1` writes `StagedBuild_Scene_A1.ini` into the TARGET engine folder (already happens in your own packaging), and rebuilds the plugin's editor DLL inside `Scene_A1\Plugins\LightSequence\Binaries`.
+1. Manual Level Blueprint step: done by the user; verified (see above).
+2. `C:\ProgramData\Epic`: **allowed** for the next tasks, only UE service files (Zen state, crash-reporter marker), on the same terms as `%LOCALAPPDATA%` / `%APPDATA%`. Recorded in `CLAUDE.md` section 0a and `docs/ENVIRONMENT.md`.
+3. `DMXProtocol` and `DMXEngine` in `.uedev/LightSequenceBP`: **keep**.
+4. P7 notes (`StagedBuild_Scene_A1.ini` in the TARGET engine, editor DLL rebuilt in `Scene_A1\Plugins\LightSequence\Binaries`): **accepted**; already in `docs/BACKLOG.md` (R2, R5); to be covered in P7b.
+5. (new) `EngineAssociation` GUID written by the editor: accept `"5.6"` and the DEV GUID (resolved via the registry, read-only).
+6. (new) LiveCodingConsole files in the DEV engine: allowed as the third I-2 item.
+
+No open questions remain for P0.

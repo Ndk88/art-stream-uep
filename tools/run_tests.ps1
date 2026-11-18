@@ -33,7 +33,7 @@ $UProject = Join-Path $ProjectDir "LightSequenceDev.uproject"
 # --- Safety checks (CLAUDE.md section 0a) ---
 Assert-SafeEngine $EngineDir
 $Assoc = Assert-ProjectAssociation $UProject
-if ($Assoc -ne "5.6") { throw "EngineAssociation of $UProject is '$Assoc', expected '5.6' (DEV engine)." }
+if (-not (Test-DevEngineAssociation $Assoc)) { throw "EngineAssociation of $UProject is '$Assoc', which does not resolve to the DEV engine." }
 Assert-InsideRepo $ProjectDir "Project"
 
 $Stamp = Get-Date -Format "yyyyMMdd_HHmmss"
